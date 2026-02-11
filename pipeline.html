@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Empire Flows - Complete Pipeline Review</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f0f23; color: #fff; min-height: 100vh; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; }
+        .header h1 { font-size: 2rem; margin-bottom: 10px; }
+        .header p { opacity: 0.9; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
+        
+        /* Pipeline */
+        .pipeline { display: flex; flex-direction: column; gap: 20px; }
+        .stage { background: #1a1a2e; border-radius: 12px; overflow: hidden; border: 1px solid #333; }
+        .stage-header { display: flex; align-items: center; gap: 15px; padding: 20px; cursor: pointer; transition: background 0.2s; }
+        .stage-header:hover { background: #252542; }
+        .stage-num { width: 50px; height: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.3rem; flex-shrink: 0; }
+        .stage-info { flex: 1; }
+        .stage-info h3 { margin-bottom: 5px; font-size: 1.2rem; }
+        .stage-info p { color: #888; font-size: 0.9rem; }
+        .stage-meta { text-align: right; }
+        .stage-meta .time { color: #667eea; font-weight: bold; }
+        .stage-meta .type { color: #888; font-size: 0.8rem; }
+        .arrow { color: #667eea; font-size: 1.5rem; transition: transform 0.3s; }
+        .stage.open .arrow { transform: rotate(180deg); }
+        
+        /* Stage Content */
+        .stage-content { display: none; padding: 0 20px 20px; border-top: 1px solid #333; }
+        .stage.open .stage-content { display: block; padding-top: 20px; }
+        
+        /* Cards inside stages */
+        .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-top: 15px; }
+        .card { background: #252542; padding: 20px; border-radius: 8px; }
+        .card h4 { color: #667eea; margin-bottom: 10px; font-size: 0.95rem; }
+        .card ul { list-style: none; }
+        .card li { padding: 5px 0; padding-left: 20px; position: relative; color: #ccc; font-size: 0.9rem; }
+        .card li:before { content: "→"; position: absolute; left: 0; color: #667eea; }
+        
+        /* Questions preview */
+        .questions { background: #252542; padding: 20px; border-radius: 8px; margin-top: 15px; }
+        .questions h4 { color: #667eea; margin-bottom: 15px; }
+        .question { padding: 10px 0; border-bottom: 1px solid #333; }
+        .question:last-child { border-bottom: none; }
+        .question .q-num { color: #667eea; font-weight: bold; }
+        .question .q-text { color: #ccc; margin-left: 10px; }
+        
+        /* Script preview */
+        .script { background: #252542; padding: 20px; border-radius: 8px; margin-top: 15px; }
+        .script h4 { color: #667eea; margin-bottom: 15px; }
+        .script-line { padding: 10px; margin: 5px 0; border-radius: 4px; }
+        .script-line.you { background: #1e3a5f; border-left: 3px solid #667eea; }
+        .script-line.them { background: #3a1e3a; border-left: 3px solid #764ba2; }
+        .script-line span { color: #888; font-size: 0.8rem; }
+        
+        /* Deliverables */
+        .deliverable { display: flex; align-items: center; gap: 15px; padding: 15px; background: #252542; border-radius: 8px; margin: 10px 0; }
+        .deliverable-icon { font-size: 2rem; }
+        .deliverable-info h4 { margin-bottom: 5px; }
+        .deliverable-info p { color: #888; font-size: 0.9rem; }
+        
+        /* Money flow */
+        .money { display: flex; align-items: center; justify-content: center; gap: 20px; padding: 30px; background: linear-gradient(135deg, #1e3a1e 0%, #2d4a2d 100%); border-radius: 8px; margin-top: 20px; }
+        .money-item { text-align: center; }
+        .money-item .amount { font-size: 2rem; font-weight: bold; color: #4ade80; }
+        .money-item .label { color: #888; font-size: 0.9rem; }
+        
+        /* Connector */
+        .connector { display: flex; justify-content: center; padding: 10px 0; }
+        .connector-line { width: 3px; height: 30px; background: linear-gradient(to bottom, #667eea, #764ba2); border-radius: 3px; }
+        
+        /* Summary */
+        .summary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 12px; margin-top: 40px; }
+        .summary h2 { margin-bottom: 20px; }
+        .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+        .summary-item { background: rgba(255,255,255,0.1); padding: 20px; border-radius: 8px; text-align: center; }
+        .summary-item .value { font-size: 2rem; font-weight: bold; }
+        .summary-item .label { opacity: 0.9; margin-top: 5px; }
+        
+        /* Action buttons */
+        .actions { display: flex; gap: 15px; justify-content: center; margin-top: 30px; flex-wrap: wrap; }
+        .btn { padding: 15px 30px; border-radius: 8px; text-decoration: none; font-weight: bold; transition: transform 0.2s; }
+        .btn:hover { transform: scale(1.05); }
+        .btn-primary { background: #fff; color: #764ba2; }
+        .btn-secondary { background: transparent; color: #fff; border: 2px solid #fff; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔄 Empire Flows - Complete Pipeline</h1>
+        <p>Review every step of your AI Tools Audit business</p>
+    </div>
+
+    <div class="container">
+        <div class="pipeline">
+            
+            <!-- Stage 1: Traffic -->
+            <div class="stage open">
+                <div class="stage-header" onclick="toggleStage(this)">
+                    <div class="stage-num">1</div>
+                    <div class="stage-info">
+                        <h3>🌐 Traffic Sources</h3>
+                        <p>Where your leads come from</p>
+                    </div>
+                    <div class="stage-meta">
+                        <div class="time">ONGOING</div>
+                        <div class="type">Marketing</div>
+                    </div>
+                    <div class="arrow">▼</div>
+                </div>
+                <div class="stage-content">
+                    <div class="cards">
+                        <div class="card">
+                            <h4>LinkedIn (Primary)</h4>
+                            <ul>
+                                <li>Post 3-5x per week</li>
+                                <li>Share AI tips & insights</li>
+                                <li>Engage in comments</li>
+                                <li>DM warm leads</li>
+                            </ul>
+                        </div>
+                        <div class="card">
+                            <h4>YouTube (Later)</h4>
+                            <ul>
+                                <li>Tutorial videos</li>
+                                <li>Tool reviews</li>
+                                <li>Case studies</li>
+                            </ul>
+                        </div>
+                        <div class="card">
+                            <h4>Referrals</h4>
+                            <ul>
+                                <li>Ask every client</li>
+                                <li>Notary network</li>
+                                <li>Real estate contacts</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="connector"><div class="connector-line"></div></div>
+
+            <!-- Stage 2: Lead Magnet -->
+            <div class="stage">
+                <div class="stage-header" onclick="toggleStage(this)">
+                    <div class="stage-num">2</div>
+                    <div class="stage-info">
+                        <h3>🎁 Lead Magnet - AI Readiness Quiz</h3>
+                        <p>Capture emails & qualify leads</p>
+                    </div>
+                    <div class="stage-meta">
+                        <div class="time">FREE</div>
+                        <div class="type">Automated</div>
+                    </div>
+                    <div class="arrow">▼</div>
+                </div>
+                <div class="stage-content">
+                    <p style="color:#888; margin-bottom:15px;">Visitors take a 2-minute quiz, get scored, and you capture their email + pain points.</p>
+                    <div class="questions">
+                        <h4>Quiz Questions (10 total)</h4>
+                        <div class="question"><span class="q-num">Q1:</span><span class="q-text">How well do you know where your time goes each week?</span></div>
+                        <div class="question"><span class="q-num">Q2:</span><span class="q-text">How many hours/week on repetitive tasks?</span></div>
+                        <div class="question"><span class="q-num">Q3:</span><span class="q-text">What's your current AI usage?</span></div>
+                        <div class="question"><span class="q-num">Q4:</span><span class="q-text">Do you have documented processes (SOPs)?</span></div>
+                        <div class="question"><span class="q-num">Q5:</span><span class="q-text">How many software tools do you use?</span></div>
+                        <div class="question"><span class="q-num">Q6:</span><span class="q-text">Do your tools integrate with each other?</span></div>
+                        <div class="question"><span class="q-num">Q7:</span><span class="q-text">What's your biggest bottleneck right now?</span></div>
+                        <div class="question"><span class="q-num">Q8:</span><span class="q-text">How comfortable are you with new technology?</span></div>
+                        <div class="question"><span class="q-num">Q9:</span><span class="q-text">What's your time worth per hour?</span></div>
+                        <div class="question"><span class="q-num">Q10:</span><span class="q-text">What would you do with 10 extra hours/week?</span></div>
+                    </div>
+                    <div class="cards" style="margin-top:20px;">
+                        <div class="card">
+                            <h4>Score: 0-10 🌱</h4>
+                            <ul>
+                                <li>AI Beginner</li>
+                                <li>CTA: Book Audit</li>
+                            </ul>
+                        </div>
+                        <div class="card">
+                            <h4>Score: 11-18 🔄</h4>
+                            <ul>
+                                <li>AI Aware</li>
+                                <li>CTA: Book Audit</li>
+                            </ul>
+                        </div>
+                        <div class="card">
+                            <h4>Score: 19-25 🚀</h4>
+                            <ul>
+                                <li>AI Ready</li>
+                                <li>CTA: Accelerator</li>
+                            </ul>
+                        </div>
+                        <div class="card">
+                            <h4>Score: 26-32 ⚡</h4>
+                            <ul>
+                                <li>AI Advanced</li>
+                                <li>CTA: Strategy Call</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="connector"><div class="connector-line"></div></div>
+
+            <!-- Stage 3: Email Sequence -->
+            <div class="stage">
+                <div class="stage-header" onclick="toggleStage(this)">
+                    <div class="stage-num">3</div>
+                    <div class="stage-info">
+                        <h3>📧 Email Nurture Sequence</h3>
+                        <p>Warm up leads over 7 days</p>
+                    </div>
+                    <div class="stage-meta">
+                        <div class="time">AUTO</div>
+                        <div class="type">4 Emails</div>
+                    </div>
+                    <div class="arrow">▼</div>
+                </div>
+                <div class="stage-content">
+                    <div class="cards">
+                        <div class="card">
+                            <h4>Day 1: Results</h4>
+                            <ul>
+                                <li>Their quiz score</li>
+                                <li>Personalized insight</li>
+                                <li>Soft CTA to audit</li>
+                            </ul>
+                        </div>
+                        <div class="card">
+                            <h4>Day 2: Hidden Cost</h4>
+                            <ul>
+                                <li>Calculate $$ they're losing</li>
+                                <li>Based on their answers</li>
+                                <li>Create urgency</li>
+                            </ul>
+                        </div>
+                        <div class="card">
+                            <h4>Day 4: Case Study</h4>
+                            <ul>
+                                <li>Similar business story</li>
+                                <li>Before/after results</li>
+                                <li>Build trust</li>
+                            </ul>
+                        </div>
+                        <div class="card">
+                            <h4>Day 7: Final Invite</h4>
+                            <ul>
+                                <li>Direct CTA</li>
+                                <li>Scarcity (limited spots)</li>
+                                <li>Last chance vibe</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="connector"><div class="connector-line"></div></div>
+
+            <!-- Stage 4: Landing Page -->
+            <div class="stage">
+                <div class="stage-header" onclick="toggleStage(this)">
+                    <div class="stage-num">4</div>
+                    <div class="stage-info">
+                        <h3>🖥️ Landing Page</h3>
+                        <p>empireflows.com - Sells the Audit</p>
+                    </div>
+                    <div class="stage-meta">
+                        <div class="time">$497</div>
+                        <div class="type">Live</div>
+                    </div>
+                    <div class="arrow">▼</div>
+                </div>
+                <div class="stage-content">
+                    <div class="cards">
+                        <div class="card">
+                            <h4>Hero Section</h4>
+                            <ul>
+                                <li>"You've Tried AI Tools."</li>
+                                <li>"They Haven't Worked."</li>
+                                <li>CTA: Book Audit $497</li>
+                            </ul>
+                        </div>
+                        <div class="card">
+                            <h4>Problem Section</h4>
+                            <ul>
+                                <li>5 pain points they relate to</li>
+                                <li>"Sound familiar?"</li>
+                                <li>Agitate the problem</li>
+                            </ul>
+                        </div>
+                        <div class="card">
+                            <h4>Solution Section</h4>
+                            <ul>
+                                <li>3-step process</li>
+                                <li>Discovery → Report → Follow-up</li>
+                                <li>Simple & clear</li>
+                            </ul>
+                        </div>
+                        <div class="card">
+                            <h4>Credibility + CTA</h4>
+                            <ul>
+                                <li>Your credentials</li>
+                                <li>Guarantee</li>
+                                <li>Final CTA</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="connector"><div class="connector-line"></div></div>
+
+            <!-- Stage 5: Booking -->
+            <div class="stage">
+                <div class="stage-header" onclick="toggleStage(this)">
+                    <div class="stage-num">5</div>
+                    <div class="stage-info">
+                        <h3>📅 Calendly Booking</h3>
+                        <p>They pick a time + answer pre-questions</p>
+                    </div>
+                    <div class="stage-meta">
+                        <div class="time">AUTO</div>
+                        <div class="type">calendly.com/onesam69</div>
+                    </div>
+                    <div class="arrow">▼</div>
+                </div>
+                <div class="stage-content">
+                    <p style="color:#888; margin-bottom:15px;">After booking, they receive the Pre-Call Questionnaire (18 questions) to complete 24h before the call.</p>
+                    <div class="questions">
+                        <h4>Pre-Call Questionnaire Sections</h4>
+                        <div class="question"><span class="q-num">Section 1:</span><span class="q-text">About Your Business (4 questions)</span></div>
+                        <div class="question"><span class="q-num">Section 2:</span><span class="q-text">Your Time - where hours go (3 questions)</span></div>
+                        <div class="question"><span class="q-num">Section 3:</span><span class="q-text">Current Tools - what they use (4 questions)</span></div>
+                        <div class="question"><span class="q-num">Section 4:</span><span class="q-text">Your Goals - success definition (3 questions)</span></div>
+                        <div class="question"><span class="q-num">Section 5:</span><span class="q-text">Mindset Check - tech comfort (3 questions)</span></div>
+                        <div class="question"><span class="q-num">Section 6:</span><span class="q-text">Anything Else (1 question)</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="connector"><div class="connector-line"></div></div>
+
+            <!-- Stage 6: Discovery Call -->
+            <div class="stage">
+                <div class="stage-header" onclick="toggleStage(this)">
+                    <div class="stage-num">6</div>
+                    <div class="stage-info">
+                        <h3>📞 Discovery Call</h3>
+                        <p>60-minute deep dive with client</p>
+                    </div>
+                    <div class="stage-meta">
+                        <div class="time">60 MIN</div>
+                        <div class="type">Your Time</div>
+                    </div>
+                    <div class="arrow">▼</div>
+                </div>
+                <div class="stage-content">
+                    <div class="script">
+                        <h4>Call Script</h4>
+                        <div class="script-line you"><span>YOU (2 min):</span> Opening - thank them, set expectations, no pitch promise</div>
+                        <div class="script-line you"><span>YOU (3 min):</span> Warm-up - "Tell me about your business"</div>
+                        <div class="script-line them"><span>THEM:</span> They talk about their business</div>
+                        <div class="script-line you"><span>YOU (10 min):</span> Pain Discovery - "Walk me through a typical week"</div>
+                        <div class="script-line them"><span>THEM:</span> Reveal bottlenecks, frustrations, time vampires</div>
+                        <div class="script-line you"><span>YOU:</span> "What tasks do you wish you could automate?"</div>
+                        <div class="script-line you"><span>YOU:</span> "Have you tried any AI tools? What happened?"</div>
+                        <div class="script-line you"><span>YOU:</span> "If you could wave a magic wand and fix ONE thing?"</div>
+                        <div class="script-line you"><span>YOU (5 min):</span> Dream State - "If you had 10 extra hours/week..."</div>
+                        <div class="script-line you"><span>YOU (5 min):</span> Close - explain next steps, get referrals</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="connector"><div class="connector-line"></div></div>
+
+            <!-- Stage 7: Create Report -->
+            <div class="stage">
+                <div class="stage-header" onclick="toggleStage(this)">
+                    <div class="stage-num">7</div>
+                    <div class="stage-info">
+                        <h3>📝 Create Audit Report</h3>
+                        <p>Your deliverable - within 48 hours</p>
+                    </div>
+                    <div class="stage-meta">
+                        <div class="time">90-120 MIN</div>
+                        <div class="type">Your Time</div>
+                    </div>
+                    <div class="arrow">▼</div>
+                </div>
+                <div class="stage-content">
+                    <p style="color:#888; margin-bottom:15px;">Use the template to fill in their specific information:</p>
+                    <div class="deliverable">
+                        <div class="deliverable-icon">🗺️</div>
+                        <div class="deliverable-info">
+                            <h4>Workflow Map</h4>
+                            <p>Visual diagram of their current processes and where time goes</p>
+                        </div>
+                    </div>
+                    <div class="deliverable">
+                        <div class="deliverable-icon">🧛</div>
+                        <div class="deliverable-info">
+                            <h4>Time Vampires List</h4>
+                            <p>Top 5 activities draining their hours with estimated time</p>
+                        </div>
+                    </div>
+                    <div class="deliverable">
+                        <div class="deliverable-icon">⚡</div>
+                        <div class="deliverable-info">
+                            <h4>Quick Wins</h4>
+                            <p>3 things to fix THIS WEEK - no tools needed</p>
+                        </div>
+                    </div>
+                    <div class="deliverable">
+                        <div class="deliverable-icon">🤖</div>
+                        <div class="deliverable-info">
+                            <h4>AI Recommendations</h4>
+                            <p>3-5 specific tools matched to THEIR problems</p>
+                        </div>
+                    </div>
+                    <div class="deliverable">
+                        <div class="deliverable-icon">🗓️</div>
+                        <div class="deliverable-info">
+                            <h4>Implementation Roadmap</h4>
+                            <p>Week 1, Week 2, Week 3... step by step</p>
+                        </div>
+                    </div>
+                    <div class="deliverable">
+                        <div class="deliverable-icon">💰</div>
+                        <div class="deliverable-info">
+                            <h4>ROI Projection</h4>
+                            <p>Estimated hours saved per week = dollars saved</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="connector"><div class="connector-line"></div></div>
+
+            <!-- Stage 8: Follow-Up Call -->
+            <div class="stage">
+                <div class="stage-header" onclick="toggleStage(this)">
+                    <div class="stage-num">8</div>
+                    <div class="stage-info">
+                        <h3>📱 Follow-Up Call</h3>
+                        <p>Walk through report + upsell opportunity</p>
+                    </div>
+                    <div class="stage-meta">
+                        <div class="time">30 MIN</div>
+                        <div class="type">Your Time</div>
+                    </div>
+                    <div class="arrow">▼</div>
+                </div>
+                <div class="stage-content">
+                    <div class="script">
+                        <h4>Follow-Up Script</h4>
+                        <div class="script-line you"><span>YOU (5 min):</span> Walk through the report overview</div>
+                        <div class="script-line you"><span>YOU (10 min):</span> Explain each recommendation and WHY</div>
+                        <div class="script-line them"><span>THEM:</span> Ask questions</div>
+                        <div class="script-line you"><span>YOU (5 min):</span> Help them pick first action</div>
+                        <div class="script-line you"><span>YOU (5 min):</span> "Want help implementing this?"</div>
+                        <div class="script-line you"><span>UPSELL:</span> Offer Accelerator program or Retainer</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="connector"><div class="connector-line"></div></div>
+
+            <!-- Stage 9: Upsell -->
+            <div class="stage">
+                <div class="stage-header" onclick="toggleStage(this)">
+                    <div class="stage-num">9</div>
+                    <div class="stage-info">
+                        <h3>🚀 Upsell Path</h3>
+                        <p>Where the real money is</p>
+                    </div>
+                    <div class="stage-meta">
+                        <div class="time">$997+</div>
+                        <div class="type">Optional</div>
+                    </div>
+                    <div class="arrow">▼</div>
+                </div>
+                <div class="stage-content">
+                    <div class="cards">
+                        <div class="card">
+                            <h4>Accelerator Core - $997</h4>
+                            <ul>
+                                <li>8-week curriculum</li>
+                                <li>Community access</li>
+                                <li>Templates & resources</li>
+                            </ul>
+                        </div>
+                        <div class="card">
+                            <h4>Accelerator+ - $2,497</h4>
+                            <ul>
+                                <li>Everything in Core</li>
+                                <li>Weekly group coaching</li>
+                                <li>Accountability</li>
+                            </ul>
+                        </div>
+                        <div class="card">
+                            <h4>VIP - $4,997</h4>
+                            <ul>
+                                <li>Everything in Accelerator</li>
+                                <li>1:1 support</li>
+                                <li>Priority access</li>
+                            </ul>
+                        </div>
+                        <div class="card">
+                            <h4>Retainer - $497/mo</h4>
+                            <ul>
+                                <li>Monthly optimization call</li>
+                                <li>Slack access</li>
+                                <li>Ongoing support</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Money Summary -->
+        <div class="money">
+            <div class="money-item">
+                <div class="amount">$497</div>
+                <div class="label">Per Audit</div>
+            </div>
+            <div class="money-item">
+                <div class="amount">×</div>
+                <div class="label">&nbsp;</div>
+            </div>
+            <div class="money-item">
+                <div class="amount">3-4 hrs</div>
+                <div class="label">Your Time</div>
+            </div>
+            <div class="money-item">
+                <div class="amount">=</div>
+                <div class="label">&nbsp;</div>
+            </div>
+            <div class="money-item">
+                <div class="amount">$125-165/hr</div>
+                <div class="label">Your Rate</div>
+            </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="summary">
+            <h2>📊 Year 1 Projection</h2>
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <div class="value">50</div>
+                    <div class="label">Audits @ $497</div>
+                </div>
+                <div class="summary-item">
+                    <div class="value">40%</div>
+                    <div class="label">Convert to Accelerator</div>
+                </div>
+                <div class="summary-item">
+                    <div class="value">$200K+</div>
+                    <div class="label">Potential Revenue</div>
+                </div>
+                <div class="summary-item">
+                    <div class="value">20 hrs/wk</div>
+                    <div class="label">Max Time Required</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="actions">
+            <a href="http://empireflows.com" class="btn btn-primary">View Landing Page</a>
+            <a href="https://calendly.com/onesam69/30min" class="btn btn-secondary">Test Booking</a>
+        </div>
+
+    </div>
+
+    <script>
+        function toggleStage(header) {
+            const stage = header.parentElement;
+            stage.classList.toggle('open');
+        }
+    </script>
+</body>
+</html>
